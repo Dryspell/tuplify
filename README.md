@@ -7,7 +7,8 @@
     - [Serialization](#serialization)
     - [Deserialization](#deserialization)
     - [Just the Essentials](#just-the-essentials)
-    - [Benchmarks](#benchmarks)
+  - [Tests](#tests)
+  - [Benchmarks](#benchmarks)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -286,7 +287,11 @@ Doing so, you can use the library without as much of the organizational overhead
 
 See the [tests](tests) folder for more examples.
 
-### Benchmarks
+## Tests
+
+Clone the repo and run `deno test tests/` to run the tests.
+
+## Benchmarks
 
 The project includes benchmarks to evaluate the performance of Tuplify compared to native JSON methods. These benchmarks measure serialization, deserialization, and property access times.
 
