@@ -1,5 +1,16 @@
 # Tuplify
 
+- [Tuplify](#tuplify)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Usage](#usage)
+    - [Serialization](#serialization)
+    - [Deserialization](#deserialization)
+    - [Just the Essentials](#just-the-essentials)
+    - [Benchmarks](#benchmarks)
+  - [Contributing](#contributing)
+  - [License](#license)
+
 ## Overview
 
 Tuplify is a ECMAScript / TypeScript library designed to serialize arbitrary ECMAScript objects with the mindset that `if my server and client both agree on a schema, then I shouldn't have to send all the keys with every request`. As such, Tuplify serializes objects into a series of nested tuples that omit the keys of the original object. This approach aims to optimize data storage and transmission by reducing the size of serialized data by the ratio of the length of the keys to the length of the values. For example:
