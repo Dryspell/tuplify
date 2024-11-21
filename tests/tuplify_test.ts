@@ -87,7 +87,7 @@ Deno.test("serializeWithType should correctly serialize a product", () => {
 });
 
 Deno.test(
-	"deserializationProxyWrapper should correctly deserialize a user",
+	"deserializationProxyWrapper should correctly deserialize a user - JSON.stringify",
 	() => {
 		const serializedUser = [
 			"user" as const,
@@ -109,6 +109,34 @@ Deno.test(
 					zip: 12345,
 				},
 			})
+		);
+	}
+);
+
+
+Deno.test(
+	"deserializationProxyWrapper should correctly deserialize a user",
+	() => {
+		const serializedUser = [
+			"user" as const,
+			"John Doe",
+			30,
+			["123 Main St", "Boston", 12345],
+		] as ["user", string, number, [string, string, number]];
+		const deserialized = deserializationProxyWrapper(serializedUser);
+
+		assertEquals(
+			deserialized,
+			{
+				type: "user",
+				name: "John Doe",
+				age: 30,
+				address: {
+					street: "123 Main St",
+					city: "Boston",
+					zip: 12345,
+				},
+			}
 		);
 	}
 );

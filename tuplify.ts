@@ -53,7 +53,8 @@ export default function tuplify<
 
 		function createProxy(
 			rep: SerializableObject | Serializable[],
-			data: SerializedTuple
+			data: SerializedTuple,
+			type?: string
 		): SerializableObject | Serializable[] {
 			if (!rep || typeof rep !== "object") {
 				throw new Error("Representative must be a non-null object.");
@@ -67,139 +68,154 @@ export default function tuplify<
 				);
 			}
 
-			return new Proxy(
-				Array.isArray(rep) ? [] : {}, // Use [] for arrays, {} for objects
-				{
-					get(_, prop: string | symbol) {
-						if (prop === "toJSON") {
-							// Recursively serialize the data back into JSON-compatible format
-							return () =>
-								Array.isArray(rep)
-									? data.map((item, index) =>
-											isPrimitive(item)
-												? item
-												: createProxy(
-														rep[0] as SerializableObject,
-														item
-														// @ts-expect-error need to fix
-												  ).toJSON()
+			return new Proxy(Array.isArray(rep) ? [] : {}, {
+				get(_, prop: string | symbol) {
+					if (prop === "toJSON") {
+						// Recursively serialize the data back into JSON-compatible format
+						return () =>
+							Array.isArray(rep)
+								? isPrimitive(data[0])
+									? data
+									: data.map((item, index) =>
+											createProxy(
+												rep[0] as SerializableObject,
+												// @ts-expect-error should not be primitive since we already checked
+												item
+												// @ts-expect-error need to fix?
+											).toJSON()
 									  )
-									: toJSON(rep, data);
-						}
+								: toJSON(rep, data);
+					}
 
-						if (prop === Symbol.iterator && Array.isArray(data)) {
-							return data[Symbol.iterator].bind(data);
-						}
+					if (prop === Symbol.iterator && Array.isArray(data)) {
+						return data[Symbol.iterator].bind(data);
+					}
 
-						if (prop === Symbol.toStringTag) {
-							return Array.isArray(rep) ? "Array" : "Object";
-						}
+					if (prop === Symbol.toStringTag) {
+            return undefined;
+						// return type
+						// 	?.replace(/"_"/g, " ")
+						// 	.replace(/\b\w/g, (char) => char.toUpperCase());
+						// return Array.isArray(rep) ? "Array" : "Object";
+					}
 
-						if (Array.isArray(rep)) {
-							// Handle array-specific properties
-							if (prop === "length") return data.length;
-							if (
-								typeof prop === "symbol" ||
-								isNaN(Number(prop))
-							) {
-								throw new Error(
-									`Invalid array property: ${String(prop)}`
-								);
-							}
-							const index = Number(prop);
-							const dataValue = data[index];
-
-							return isPrimitive(dataValue)
-								? dataValue
-								: createProxy(
-										rep[0] as SerializableObject,
-										dataValue
-								  );
-						}
-
-						if (typeof prop !== "string") {
+					if (Array.isArray(rep)) {
+						if (prop === "length") return data.length;
+						if (typeof prop === "symbol" || isNaN(Number(prop))) {
 							throw new Error(
-								`Unsupported property access: ${String(prop)}`
+								`Invalid array property: ${String(prop)}`
 							);
 						}
-
-						const index = repKeys.indexOf(prop);
-
-						if (index === -1) {
-							throw new Error(
-								`Property "${prop}" does not exist in the representative. ${JSON.stringify(
-									rep
-								)}`
-							);
-						}
-
-						const repValue = rep[prop];
+						const index = Number(prop);
 						const dataValue = data[index];
 
-						if (isPrimitive(dataValue)) return dataValue;
+						return isPrimitive(dataValue)
+							? dataValue
+							: createProxy(
+									rep[0] as SerializableObject,
+									dataValue,
+									prop
+							  );
+					}
 
-						if (Array.isArray(repValue)) {
-							// prop === "hobbies" && console.log(prop);
-							const repSubValue = repValue[0];
+					if (typeof prop !== "string") {
+						throw new Error(
+							`Unsupported property access: ${String(prop)}`
+						);
+					}
 
-							// console.log(repSubValue);
-							return isPrimitive(repSubValue)
-								? dataValue
-								: dataValue.map((item) => {
-										// console.log({ item });
-										return createProxy(
-											repSubValue,
-											item as SerializedTuple
-										);
-								  });
-						}
+					const index = repKeys.indexOf(prop);
 
-						if (repValue !== null && typeof repValue === "object") {
-							// Recursively wrap nested objects
-							if (!Array.isArray(dataValue)) {
-								throw new Error(
-									`Expected array or object for nested data at property "${prop}".`
-								);
-							}
-							return createProxy(
-								repValue as SerializableObject,
-								dataValue
+					if (index === -1) {
+						throw new Error(
+							`Property "${prop}" does not exist in the representative. ${JSON.stringify(
+								rep
+							)}`
+						);
+					}
+
+					const repValue = rep[prop];
+					const dataValue = data[index];
+
+					if (isPrimitive(dataValue)) return dataValue;
+
+					if (Array.isArray(repValue)) {
+						const repSubValue = repValue[0];
+
+						return isPrimitive(repSubValue)
+							? dataValue
+							: dataValue.map((item) => {
+									return createProxy(
+										repSubValue,
+										item as SerializedTuple,
+										prop
+									);
+							  });
+					}
+
+					if (repValue !== null && typeof repValue === "object") {
+						// Recursively wrap nested objects
+						if (!Array.isArray(dataValue)) {
+							throw new Error(
+								`Expected array or object for nested data at property "${prop}".`
 							);
 						}
+						return createProxy(
+							repValue as SerializableObject,
+							dataValue,
+							prop
+						);
+					}
 
-						return dataValue;
-					},
-					ownKeys() {
-						return Array.isArray(rep)
-							? Reflect.ownKeys(data)
-							: Reflect.ownKeys(rep);
-					},
-					getOwnPropertyDescriptor(_, prop: string | symbol) {
-						// console.log(`Accessed Property Descriptors`);
-						if (Array.isArray(rep)) {
-							return Object.getOwnPropertyDescriptor(data, prop);
-						}
+					return dataValue;
+				},
+				ownKeys() {
+					// Slightly faster than Reflect.ownKeys in V8 as of 12.9.202.13-rusty (2024-10-28) according to https://jsr.io/@std/assert/1.0.8/equal.ts
+					return Array.isArray(rep)
+						? [
+								...Object.getOwnPropertyNames(data),
+								...Object.getOwnPropertySymbols(data),
+						  ]
+						: [
+								...Object.getOwnPropertyNames(rep),
+								...Object.getOwnPropertySymbols(rep),
+						  ];
+				},
+				getOwnPropertyDescriptor(_, prop: string | symbol) {
+					// console.log(`Accessed Property Descriptors`);
+					if (Array.isArray(rep)) {
+						return Object.getOwnPropertyDescriptor(data, prop);
+					}
 
-						if (prop in rep) {
-							return {
-								enumerable: true,
-								configurable: true,
-								value:
-									typeof prop === "string" &&
-									data[repKeys.indexOf(prop)],
-							};
-						}
+					if (prop in rep) {
+						return {
+							enumerable: true,
+							configurable: true,
+							value:
+								typeof prop === "string" &&
+								data[repKeys.indexOf(prop)],
+						};
+					}
 
-						return undefined;
-					},
-				}
-			);
+					return undefined;
+				},
+				getPrototypeOf() {
+					return Array.isArray(rep)
+						? Array.prototype
+						: Object.prototype;
+				},
+				has(_, prop) {
+					return Array.isArray(rep)
+						? Reflect.has(data, prop)
+						: Reflect.has(rep, prop);
+				},
+			});
 		}
 
 		const { type: _, ...rData } = representative;
 		return {
 			type,
-			...createProxy(rData as SerializableObject, data),
+			...createProxy(rData as SerializableObject, data, type),
 		} as TypedObject<Ttype>;
 	}
 

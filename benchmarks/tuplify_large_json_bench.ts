@@ -76,7 +76,7 @@ const serializedSmall = JSON.stringify(serializeWithType(smallPayload));
 const serializedMedium = JSON.stringify(serializeWithType(mediumPayload));
 const serializedLarge = JSON.stringify(serializeWithType(largePayload));
 
-console.log(serializeWithType(smallPayload), smallPayload);
+// console.log(serializeWithType(smallPayload), smallPayload);
 
 // Prepare deserialized data for access benchmarks
 const parsedLarge = JSON.parse(jsonLarge);
@@ -205,10 +205,22 @@ Deno.bench(
 	);
 
 	Deno.bench(
-		`tuplify deserialize ${size} payload`,
+		`tuplify deserialize-as-proxy ${size} payload`,
 		{ group: `${size} deserialization` },
 		() => {
 			deserializationProxyWrapper(JSON.parse(serialized));
+		}
+	);
+
+	Deno.bench(
+		`tuplify deserialize-as-object ${size} payload`,
+		{ group: `${size} deserialization` },
+		() => {
+			JSON.parse(
+				JSON.stringify(
+					deserializationProxyWrapper(JSON.parse(serialized))
+				)
+			);
 		}
 	);
 });
