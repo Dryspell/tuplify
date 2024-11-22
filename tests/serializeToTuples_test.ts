@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { serializeToTuples } from "../utils.ts";
+import { serializeToTuples } from "../core.ts";
 import { SerializedTuple } from "../types.ts";
 
 Deno.test("serializeToTuples - primitives", () => {

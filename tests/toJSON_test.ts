@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { toJSON } from "../utils.ts";
+import { toJSON } from "../core.ts";
 import { Serialized } from "../types.ts";
 
 Deno.test("toJSON - primitive values", () => {

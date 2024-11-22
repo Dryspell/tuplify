@@ -2,41 +2,44 @@ import tuplify from "./tuplify.ts";
 import { equal } from "./equal.ts";
 
 const representatives = {
-	user: {
-		type: "user",
-		name: "",
-		age: 0,
-		address: {
-			street: "",
-			city: "",
-			zip: 0,
-		},
-		hobbies: [{ name: "", frequency: "" }],
-	},
-	product: {
-		type: "product",
-		title: "",
-		price: 0,
-		categories: ["hello"],
-	},
+  user: {
+    type: "user",
+    name: "",
+    age: 0,
+    address: {
+      street: "",
+      city: "",
+      zip: 0,
+    },
+    hobbies: [{ name: "", frequency: "" }],
+  },
+  product: {
+    type: "product",
+    title: "",
+    price: 0,
+    categories: ["hello"],
+  },
 };
 
-const [serializeWithType, deserializationProxyWrapper, deserializeToJSON] =
-	tuplify(representatives);
+const {
+  ser: serializeWithType,
+  deserProxy: deserializationProxyWrapper,
+  deserJson: deserializeToJSON,
+} = tuplify(representatives);
 
 const sampleUser = {
-	type: "user" as const,
-	name: "Alice",
-	age: 25,
-	address: {
-		street: "456 Elm St",
-		city: "Metropolis",
-		zip: 54321,
-	},
-	hobbies: [
-		{ name: "Cycling", frequency: "Weekly" },
-		{ name: "Chess", frequency: "Monthly" },
-	],
+  type: "user" as const,
+  name: "Alice",
+  age: 25,
+  address: {
+    street: "456 Elm St",
+    city: "Metropolis",
+    zip: 54321,
+  },
+  hobbies: [
+    { name: "Cycling", frequency: "Weekly" },
+    { name: "Chess", frequency: "Monthly" },
+  ],
 };
 console.log(sampleUser);
 
@@ -87,17 +90,17 @@ console.log(JSON.parse(JSON.stringify(deserializedUser))); // Output:
 
 console.log(Object.entries(deserializedUser)); // Output:
 [
-	["type", "user"],
-	["name", "Alice"],
-	["age", 25],
-	["address", { street: "456 Elm St", city: "Metropolis", zip: 54321 }],
-	[
-		"hobbies",
-		[
-			{ name: "Cycling", frequency: "Weekly" },
-			{ name: "Chess", frequency: "Monthly" },
-		],
-	],
+  ["type", "user"],
+  ["name", "Alice"],
+  ["age", 25],
+  ["address", { street: "456 Elm St", city: "Metropolis", zip: 54321 }],
+  [
+    "hobbies",
+    [
+      { name: "Cycling", frequency: "Weekly" },
+      { name: "Chess", frequency: "Monthly" },
+    ],
+  ],
 ];
 
 // https://jsr.io/@std/assert/1.0.8/equals.ts
