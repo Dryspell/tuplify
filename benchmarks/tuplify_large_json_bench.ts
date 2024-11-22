@@ -27,7 +27,7 @@ const representatives = {
 	},
 };
 
-const [serializeWithType, deserializationProxyWrapper] =
+const [serializeWithType, deserializationProxyWrapper, deserializeToJSON] =
 	tuplify(representatives);
 
 // Generate large sample data
@@ -221,6 +221,14 @@ Deno.bench(
 					deserializationProxyWrapper(JSON.parse(serialized))
 				)
 			);
+		}
+	);
+
+	Deno.bench(
+		`tuplify deserialize-toJSON ${size} payload`,
+		{ group: `${size} deserialization` },
+		() => {
+			deserializeToJSON(JSON.parse(serialized));
 		}
 	);
 });

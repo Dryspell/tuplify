@@ -76,13 +76,15 @@ export default function tuplify<
 							Array.isArray(rep)
 								? isPrimitive(data[0])
 									? data
-									: data.map((item, index) =>
-											createProxy(
-												rep[0] as SerializableObject,
-												// @ts-expect-error should not be primitive since we already checked
-												item
-												// @ts-expect-error need to fix?
-											).toJSON()
+									: data.map(
+											(item, index) =>
+												toJSON(rep[0], item)
+											// createProxy(
+											// 	rep[0] as SerializableObject,
+											// 	// @ts-expect-error should not be primitive since we already checked
+											// 	item
+											// 	// @ts-expect-error need to fix?
+											// ).toJSON()
 									  )
 								: toJSON(rep, data);
 					}
@@ -92,7 +94,7 @@ export default function tuplify<
 					}
 
 					if (prop === Symbol.toStringTag) {
-            return undefined;
+						return undefined;
 						// return type
 						// 	?.replace(/"_"/g, " ")
 						// 	.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -219,5 +221,22 @@ export default function tuplify<
 		} as TypedObject<Ttype>;
 	}
 
-	return [serializeWithType, deserializationProxyWrapper] as const;
+	function deserializeToJSON<
+		Ttype extends keyof TRepresentativesDict & string
+	>(serialized: TypedSerialized<Ttype>) {
+		const [type, ...data] = serialized;
+
+		const representative = representatives[type];
+		if (!representative || typeof representative !== "object") {
+			throw new Error(`No representative found for type: ${type}`);
+		}
+
+		return toJSON(representative, serialized);
+	}
+
+	return [
+		serializeWithType,
+		deserializationProxyWrapper,
+		deserializeToJSON,
+	] as const;
 }

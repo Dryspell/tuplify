@@ -21,7 +21,7 @@ const representatives = {
 	},
 };
 
-const [serializeWithType, deserializationProxyWrapper] =
+const [serializeWithType, deserializationProxyWrapper, deserializeToJSON] =
 	tuplify(representatives);
 
 const sampleUser = {
@@ -42,6 +42,8 @@ console.log(sampleUser);
 
 const serializedUser = serializeWithType(sampleUser);
 console.log(serializedUser);
+
+console.log(deserializeToJSON(serializedUser));
 
 const deserializedUser = deserializationProxyWrapper(serializedUser);
 
