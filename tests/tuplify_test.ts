@@ -22,9 +22,9 @@ const representatives = {
 };
 
 const {
-  ser: serializeWithType,
-  deserProxy: deserializationProxyWrapper,
-  deserJson: deserializeToJSON,
+  ser,
+  deserProxy,
+  deserJson,
 } = tuplify(representatives);
 
 Deno.test("serializeWithType should correctly serialize a user", () => {
@@ -39,7 +39,7 @@ Deno.test("serializeWithType should correctly serialize a user", () => {
     },
   };
 
-  const serialized = serializeWithType(user);
+  const serialized = ser(user);
   assertEquals(serialized, [
     "user",
     "John Doe",
@@ -62,7 +62,7 @@ Deno.test(
       age: 30,
     };
 
-    const serialized = serializeWithType(user);
+    const serialized = ser(user);
     assertEquals(serialized, [
       "user",
       "John Doe",
@@ -80,7 +80,7 @@ Deno.test("serializeWithType should correctly serialize a product", () => {
     categories: ["electronics", "gadgets"],
   };
 
-  const serialized = serializeWithType(product);
+  const serialized = ser(product);
   assertEquals(serialized, [
     "product",
     "Cool Gadget",
@@ -98,7 +98,7 @@ Deno.test(
       30,
       ["123 Main St", "Boston", 12345],
     ] as ["user", string, number, [string, string, number]];
-    const deserialized = deserializationProxyWrapper(serializedUser);
+    const deserialized = deserProxy(serializedUser);
 
     assertEquals(
       JSON.stringify(deserialized),
@@ -125,7 +125,7 @@ Deno.test(
       30,
       ["123 Main St", "Boston", 12345],
     ] as ["user", string, number, [string, string, number]];
-    const deserialized = deserializationProxyWrapper(serializedUser);
+    const deserialized = deserProxy(serializedUser);
 
     assertEquals(
       deserialized,
@@ -153,8 +153,8 @@ Deno.test(
       categories: ["electronics", "gadgets"],
     };
 
-    const serialized = serializeWithType(product);
-    const deserialized = deserializationProxyWrapper(serialized);
+    const serialized = ser(product);
+    const deserialized = deserProxy(serialized);
 
     assertEquals(
       JSON.stringify(deserialized),
@@ -173,7 +173,7 @@ Deno.test(
   () => {
     const invalidData = ["invalid", "data"] as ["invalid", string];
     // @ts-expect-error This is expected to throw an error
-    assertThrows(() => deserializationProxyWrapper(invalidData), Error);
+    assertThrows(() => deserProxy(invalidData), Error);
   },
 );
 
@@ -181,7 +181,7 @@ Deno.test(
   "deserializationProxyWrapper should throw error for malformed data",
   () => {
     const malformedUser = ["user", "John Doe"] as ["user", string]; // missing required fields
-    assertThrows(() => deserializationProxyWrapper(malformedUser), Error);
+    assertThrows(() => deserProxy(malformedUser), Error);
   },
 );
 
@@ -192,7 +192,7 @@ Deno.test("deserialized user should allow reading properties", () => {
     30,
     ["123 Main St", "Boston", 12345],
   ] as ["user", string, number, [string, string, number]];
-  const deserialized = deserializationProxyWrapper(serializedUser);
+  const deserialized = deserProxy(serializedUser);
 
   assertEquals(deserialized.type, "user");
   assertEquals(deserialized.name, "John Doe");
@@ -209,7 +209,7 @@ Deno.test("deserialized product should allow reading properties", () => {
     99.99,
     ["electronics", "gadgets"],
   ] as TypedSerialized<"product">;
-  const deserialized = deserializationProxyWrapper(serializedProduct);
+  const deserialized = deserProxy(serializedProduct);
 
   assertEquals(deserialized.type, "product");
   assertEquals(deserialized.title, "Cool Gadget");
@@ -224,7 +224,7 @@ Deno.test("deserialized objects should be immutable", () => {
     30,
     ["123 Main St", "Boston", 12345],
   ] as ["user", string, number, [string, string, number]];
-  const deserialized = deserializationProxyWrapper(serializedUser);
+  const deserialized = deserProxy(serializedUser);
 
   assertThrows(
     () => {

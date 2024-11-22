@@ -28,9 +28,7 @@ const representatives = {
 };
 
 const {
-  ser: serializeWithType,
-  deserProxy: deserializationProxyWrapper,
-  deserJson: deserializeToJSON,
+  ser,
 } = tuplify(representatives);
 
 // Generate large sample data
@@ -76,13 +74,13 @@ const jsonLarge = JSON.stringify(largePayload);
 
 // Prepare serialized data for deserialize benchmarks
 const serializedSmall = JSON.stringify(
-  smallPayload.map((payload) => serializeWithType(payload)),
+  smallPayload.map((payload) => ser(payload)),
 );
 const serializedMedium = JSON.stringify(
-  mediumPayload.map((payload) => serializeWithType(payload)),
+  mediumPayload.map((payload) => ser(payload)),
 );
 const serializedLarge = JSON.stringify(
-  largePayload.map((payload) => serializeWithType(payload)),
+  largePayload.map((payload) => ser(payload)),
 );
 
 // Size comparison

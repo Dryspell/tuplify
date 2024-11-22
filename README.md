@@ -6,6 +6,7 @@
   - [Usage](#usage)
     - [Serialization](#serialization)
     - [Deserialization](#deserialization)
+      - [Deserialization with Proxy](#deserialization-with-proxy)
     - [Just the Essentials](#just-the-essentials)
   - [Tests](#tests)
   - [Benchmarks](#benchmarks)
@@ -14,7 +15,11 @@
 
 ## Overview
 
-Tuplify is a ECMAScript / TypeScript library designed to serialize arbitrary ECMAScript objects with the mindset that `if my server and client both agree on a schema, then I shouldn't have to send all the keys with every request`. As such, Tuplify serializes objects into a series of nested tuples that omit the keys of the original object. This approach aims to optimize data storage and transmission by reducing the size of serialized data by the ratio of the length of the keys to the length of the values. For example:
+Tuplify is a ECMAScript / TypeScript library designed to serialize arbitrary ECMAScript objects with the mindset that:
+
+```if my server and client both agree on a schema, then I shouldn't have to send all the keys with every request```
+
+As such, Tuplify serializes objects into a series of nested tuples that omit the keys of the original object. This approach aims to optimize data storage and transmission by reducing the size of serialized data by the ratio of the length of the keys to the length of the values. For example:
 
 ```json
 {
@@ -46,7 +51,7 @@ gets serialized to:
 
 for a reduction of about **40%** of the size of the original object.
 
-In deserialization, Tuplify maintains the ability to easily reconstruct the original objects (through simple `JSON.parse(JSON.stringify(DESERIALIZED_OBJECT))`) or alternatively provide a proxy wrapper that provides the DX of traditional JavaScript objects while keeping the structure of the underlying data as a tuple.
+In deserialization, Tuplify maintains the ability to easily reconstruct the original objects (through simple `deserJson(SERIALIZED_OBJECT)`) or alternatively using the supplied proxy wrapper that provides the DX of traditional ECMAScript objects while keeping the structure of the underlying data as a tuple (only pay overhead of property access instead of deserialization).
 
 Note that the trade-off that we make is between serialization/deserialization speed and the size of the serialized object which is a trade-off that must be made for any serialization library, and results in data that is similar in structure to any other tabular data format (e.g. CSV, Parquet, SQL,etc.).
 
@@ -90,8 +95,7 @@ Note that the `type` field is required for every object in the representative st
 Given this representative structure, you can then generate a serialization and deserialization functions:
 
 ```typescript
-const [serializeWithType, deserializationProxyWrapper] =
- tuplify(representatives);
+const { ser, deserJson, deserProxy } = tuplify(representatives);
 ```
 
 Suppose we have the following object that we wish to serialize:
@@ -115,28 +119,26 @@ const sampleUser = {
 
 ### Serialization
 
-To serialize an object, use the `serializeWithType` function. Using the `sampleUser` object defined above, we can serialize it as follows:
+To serialize an object, use the `ser` function. Using the `sampleUser` object defined above, we can serialize it as follows:
 
 ```typescript
-const serializedUser = serializeWithType(sampleUser);
+const serializedUser = ser(sampleUser);
 ```
 
 If you inspect the `serializedUser`, you will see that it is a tuple of tuples.
 
 ```typescript
-console.log(serializedUser);
-```
-
-yields
-
-```json
+console.log(serializedUser); // Output:
 [
-  "user",
-  "Alice",
-  25,
-  [ "456 Elm St", "Metropolis", 54321 ],
-  [ [ "Cycling", "Weekly" ], [ "Chess", "Monthly" ] ]  
-]
+ "user",
+ "Alice",
+ 25,
+ ["456 Elm St", "Metropolis", 54321],
+ [
+  ["Cycling", "Weekly"],
+  ["Chess", "Monthly"],
+ ],
+];
 ```
 
 If your framework of choice (websockets, http, etc.) does not support tuples or JSON or does not automatically stringify before transmission, you can convert the tuple to a JSON string using `JSON.stringify` before transmitting it over the network. If you look over the benchmarks, you can see that this extra step of serialization compared to `JSON.stringify` is relatively negligible amounting to about 5-30% overhead, depending on the structure of the original object. That is, `JSON.stringify` alone is faster than ripping out the keys while preserving the structure and then stringifying it but for objects like this one, we're talking about 100µs vs 120µs.
@@ -147,10 +149,18 @@ Worry not about the order of the entries before serialization. Tuplify will alwa
 
 ### Deserialization
 
-To deserialize a tuple back into an object, use the `deserializationProxyWrapper` function. This function returns a Proxy-wrapped object that behaves like the original object.
+To deserialize a tuple back into an object, `tuplify` returns two options: `deserJson` and `deserProxy`. Using the `deserJson` function recreates the original objects faster than doing `JSON.parse(JSON.stringify(deserProxy(SERIALIZED_OBJECT)))` although this still works. See the benchmarks to compare the actual differences in overhead but as a summary, using `deserJson` is about 1.3-1.5x slower than `JSON.parse` while `deserProxy` is nearly as fast as `JSON.parse` but using the latter incurs costs on every property access.
 
 ```typescript
-const deserializedUser = deserializationProxyWrapper(serializedUser);
+const deserializedUser = deserJson(serializedUser);
+```
+
+#### Deserialization with Proxy
+
+As an alternative to `deserJson`, you can use the `deserProxy` function. This function returns a Proxy-wrapped object that behaves like the original object.
+
+```typescript
+const deserializedUser = deserProxy(serializedUser);
 ```
 
 With the deserialized object, you can access the properties just like you would with a normal object.
@@ -204,10 +214,17 @@ console.log(Object.entries(deserializedUser)); // Output:
    { name: "Chess", frequency: "Monthly" },
   ],
  ],
-]
+];
 ```
 
-If you wish to yield the original object without the proxy, you can do so by simply calling `JSON.parse(JSON.stringify(deserializedUser))`.
+We even get deep equality checking!
+
+```typescript
+// Source Code for Deno assertEqual - https://jsr.io/@std/assert/1.0.8/equals.ts
+console.log(equal(deserializedUser, sampleUser)); // Output: true
+```
+
+If you wish to yield the original object without the proxy, you can do so by simply calling `JSON.parse(JSON.stringify(deserializedUser))` or switch to using the `deserJson` function.
 
 ```typescript
 console.log(JSON.parse(JSON.stringify(deserializedUser))); // Output:
@@ -221,15 +238,6 @@ console.log(JSON.parse(JSON.stringify(deserializedUser))); // Output:
     { name: "Chess", frequency: "Monthly" }
   ]
 };
-```
-
-Doing so, you don't have to pay the overhead of the proxy wrapper for any future property access but you have to pay additional upfront cost of the `JSON.parse(JSON.stringify(...))` operation.
-
-We even get deep equality checking!
-
-```typescript
-// Source Code for Deno assertEqual - https://jsr.io/@std/assert/1.0.8/equals.ts
-console.log(equal(deserializedUser, sampleUser)); // Output: true
 ```
 
 ### Just the Essentials

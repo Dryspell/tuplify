@@ -26,10 +26,14 @@ const representatives = {
   },
 };
 
+Deno.bench("Generate Tuplify Functions", () => {
+  tuplify(representatives);
+});
+
 const {
-  ser: serializeWithType,
-  deserProxy: deserializationProxyWrapper,
-  deserJson: deserializeToJSON,
+  ser,
+  deserProxy,
+  deserJson,
 } = tuplify(representatives);
 
 function generateSampleData(eventCount: number) {
@@ -70,13 +74,13 @@ const jsonSmall = JSON.stringify(smallPayload);
 const jsonMedium = JSON.stringify(mediumPayload);
 const jsonLarge = JSON.stringify(largePayload);
 
-const serializedSmall = JSON.stringify(serializeWithType(smallPayload));
-const serializedMedium = JSON.stringify(serializeWithType(mediumPayload));
-const serializedLarge = JSON.stringify(serializeWithType(largePayload));
+const serializedSmall = JSON.stringify(ser(smallPayload));
+const serializedMedium = JSON.stringify(ser(mediumPayload));
+const serializedLarge = JSON.stringify(ser(largePayload));
 
 const parsedLarge = JSON.parse(jsonLarge);
-const tuplifiedLarge = deserializationProxyWrapper(
-  serializeWithType(largePayload),
+const tuplifiedLarge = deserProxy(
+  ser(largePayload),
 );
 
 Deno.bench(
@@ -180,7 +184,7 @@ Deno.bench(
     `tuplify serialize ${size} payload`,
     { group: `${size} serialization` },
     () => {
-      JSON.stringify(serializeWithType(payload));
+      JSON.stringify(ser(payload));
     },
   );
 
@@ -196,7 +200,7 @@ Deno.bench(
     `tuplify deserialize-as-proxy ${size} payload`,
     { group: `${size} deserialization` },
     () => {
-      deserializationProxyWrapper(JSON.parse(serialized));
+      deserProxy(JSON.parse(serialized));
     },
   );
 
@@ -206,7 +210,7 @@ Deno.bench(
     () => {
       JSON.parse(
         JSON.stringify(
-          deserializationProxyWrapper(JSON.parse(serialized)),
+          deserProxy(JSON.parse(serialized)),
         ),
       );
     },
@@ -216,7 +220,7 @@ Deno.bench(
     `tuplify deserialize-toJSON ${size} payload`,
     { group: `${size} deserialization` },
     () => {
-      deserializeToJSON(JSON.parse(serialized));
+      deserJson(JSON.parse(serialized));
     },
   );
 });

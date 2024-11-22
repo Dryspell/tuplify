@@ -22,9 +22,9 @@ const representatives = {
 };
 
 const {
-  ser: serializeWithType,
-  deserProxy: deserializationProxyWrapper,
-  deserJson: deserializeToJSON,
+  ser,
+  deserProxy,
+  deserJson,
 } = tuplify(representatives);
 
 const sampleUser = {
@@ -43,12 +43,19 @@ const sampleUser = {
 };
 console.log(sampleUser);
 
-const serializedUser = serializeWithType(sampleUser);
-console.log(serializedUser);
+const serializedUser = ser(sampleUser);
+console.log(serializedUser); // Output:
+[
+  "user",
+  "Alice",
+  25,
+  [ "456 Elm St", "Metropolis", 54321 ],
+  [ [ "Cycling", "Weekly" ], [ "Chess", "Monthly" ] ]  
+];
 
-console.log(deserializeToJSON(serializedUser));
+console.log(deserJson(serializedUser));
 
-const deserializedUser = deserializationProxyWrapper(serializedUser);
+const deserializedUser = deserProxy(serializedUser);
 
 console.log(deserializedUser); // Output:
 // {

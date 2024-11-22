@@ -19,10 +19,14 @@ const representatives = {
   },
 };
 
+Deno.bench("Generate Tuplify Functions", () => {
+  tuplify(representatives);
+});
+
 const {
-  ser: serializeWithType,
-  deserProxy: deserializationProxyWrapper,
-  deserJson: deserializeToJSON,
+  ser,
+  deserProxy,
+  deserJson,
 } = tuplify(representatives);
 
 const sampleUser = {
@@ -60,7 +64,7 @@ Deno.bench(
     group: "user serialization",
   },
   () => {
-    JSON.stringify(serializeWithType(sampleUser));
+    JSON.stringify(ser(sampleUser));
   },
 );
 
@@ -81,11 +85,11 @@ Deno.bench(
     group: "product serialization",
   },
   () => {
-    JSON.stringify(serializeWithType(sampleProduct));
+    JSON.stringify(ser(sampleProduct));
   },
 );
 
-const serializedUser = JSON.stringify(serializeWithType(sampleUser));
+const serializedUser = JSON.stringify(ser(sampleUser));
 // [
 // 	"user",
 // 	"John Doe",
@@ -93,7 +97,7 @@ const serializedUser = JSON.stringify(serializeWithType(sampleUser));
 // 	["123 Main St", "Boston", 12345],
 // ] as TypedSerialized<"user">;
 
-const serializedProduct = JSON.stringify(serializeWithType(sampleProduct));
+const serializedProduct = JSON.stringify(ser(sampleProduct));
 // [
 // 	"product",
 // 	"Cool Gadget",
@@ -121,7 +125,7 @@ Deno.bench(
     group: "user deserialization",
   },
   () => {
-    deserializationProxyWrapper(JSON.parse(serializedUser));
+    deserProxy(JSON.parse(serializedUser));
   },
 );
 
@@ -142,16 +146,16 @@ Deno.bench(
     group: "product deserialization",
   },
   () => {
-    deserializationProxyWrapper(JSON.parse(serializedProduct));
+    deserProxy(JSON.parse(serializedProduct));
   },
 );
 
 const parsedUser = JSON.parse(jsonUser);
-const tuplifiedUser = deserializationProxyWrapper<"user">(
+const tuplifiedUser = deserProxy<"user">(
   JSON.parse(serializedUser),
 );
 const parsedProduct = JSON.parse(jsonProduct);
-const tuplifiedProduct = deserializationProxyWrapper<"product">(
+const tuplifiedProduct = deserProxy<"product">(
   JSON.parse(serializedProduct),
 );
 
